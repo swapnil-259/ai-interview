@@ -1,7 +1,6 @@
 import { Layout, Tabs } from 'antd';
 import IntervieweeChat from './components/IntervieweeChat';
 import InterviewerDashboard from './components/InterviewerDashboard';
-import WelcomeBackModal from './components/WelcomeBackModal';
 const { Header, Content } = Layout;
 
 export default function App() {
@@ -14,7 +13,6 @@ export default function App() {
           { key: '2', label: 'Interviewer (Dashboard)', children: <InterviewerDashboard /> },
         ]} />
       </Content>
-      <WelcomeBackModal />
     </Layout>
   );
 }

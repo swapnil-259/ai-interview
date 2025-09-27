@@ -16,4 +16,6 @@ export type Candidate = {
   summary?: string;
   progress?: { currentQuestionIndex: number; questionStartAt?: number; pausedAt?: number }
   resumeFileName?: string;
+  score?: number;
+  testCompleted: boolean;
 }

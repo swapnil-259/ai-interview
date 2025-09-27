@@ -24,7 +24,9 @@ const slice = createSlice({
         status: 'not-started',
         summary: undefined,
         progress: { currentQuestionIndex: 0, questionStartAt: undefined, pausedAt: undefined },
-        resumeFileName: action.payload.resumeFileName
+        resumeFileName: action.payload.resumeFileName,
+        score : action.payload.score ?? 0,
+        testCompleted: action.payload.testCompleted ?? false
       };
       state.list.push(c);
     },
