@@ -131,10 +131,12 @@ app.post("/api/evaluate-test", async (req: Request<{}, {}, EvaluateTestRequestBo
 
     const evalPrompt = `
 You are an expert interviewer and grader.
-Evaluate each answer strictly in JSON array:
+Evaluate each answer strictly in JSON array format:
 [
   { "questionId": "...", "score": 0-3, "feedback": "short feedback" }
 ]
+Also, provide a final summary about the candidate in a field "finalSummary": "<text>"
+
 Add a final field: { "totalScore": <sum> }
 
 Answers:
@@ -160,6 +162,8 @@ Candidate context: ${candidateContext}
       const lastBracket = out.lastIndexOf("]");
       if (firstBracket !== -1 && lastBracket !== -1) {
         parsed = JSON.parse(out.slice(firstBracket, lastBracket + 1));
+        const summaryMatch = out.match(/"finalSummary"\s*:\s*"([^"]+)"/);
+        parsed.finalSummary = summaryMatch ? summaryMatch[1] : "Summary not available";
       } else {
         console.warn("⚠️ Invalid eval JSON, using fallback scoring.");
         const total = answers.length;
@@ -168,8 +172,10 @@ Candidate context: ${candidateContext}
             questionId: a.questionId,
             score: 1,
             feedback: "Fallback: answer accepted",
+            
           })),
           totalScore: total,
+          finalSummary: "Fallback: candidate evaluation summary not available",
         });
       }
     }
@@ -184,6 +190,7 @@ Candidate context: ${candidateContext}
         feedback: "Fallback: answer accepted",
       })),
       totalScore: req.body.answers.length,
+      finalSummary: "Fallback: candidate evaluation summary not available",
     });
   }
 });

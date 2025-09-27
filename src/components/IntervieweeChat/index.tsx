@@ -71,7 +71,8 @@ export default function IntervieweeChat() {
       chat: [],
       resumeFileName: file.name,
       score: 0,
-      testCompleted: false
+      testCompleted: false,
+      summary: ''
     }));
     setCurrentId(id);
     setTestStarted(false);
@@ -140,9 +141,11 @@ export default function IntervieweeChat() {
   }, [currentId, questionQueue, currentQuestionIndex, timer, testStarted, score, paused]);
 
   useEffect(() => {
-    const saved = localStorage.getItem('interviewState');
-    if (saved) {
-      const parsed = JSON.parse(saved);
+  const saved = localStorage.getItem('interviewState');
+  if (saved) {
+    const parsed = JSON.parse(saved);
+    const savedCandidate = candidates.find(c => c.id === parsed.currentId);
+    if (savedCandidate && !savedCandidate.testCompleted) {
       setCurrentId(parsed.currentId);
       setQuestionQueue(parsed.questionQueue);
       setCurrentQuestionIndex(parsed.currentQuestionIndex);
@@ -151,8 +154,11 @@ export default function IntervieweeChat() {
       setScore(parsed.score);
       setPaused(true);
       setShowResumeModal(true);
+    } else {
+      localStorage.removeItem('interviewState');
     }
-  }, []);
+  }
+}, [candidates]);
 
   useEffect(() => {
     if (!testStarted || paused || questionQueue.length === 0 || currentQuestionIndex >= questionQueue.length) return;
@@ -249,9 +255,10 @@ export default function IntervieweeChat() {
       });
 
       const totalScore = data.totalScore ?? (data as { score: number }[]).reduce((sum, e) => sum + (e.score ?? 0), 0);
+      const finalSummary = data.summary ?? 'No summary available';
 
       setScore(totalScore);
-      dispatch(updateCandidateProfile({ id: currentId, data: { score: totalScore, testCompleted: true } }));
+      dispatch(updateCandidateProfile({ id: currentId, data: { score: totalScore, testCompleted: true , summary: finalSummary } }));
       message.success(`Test completed! Score: ${totalScore}`);
       setTestStarted(false);
       setQuestionQueue([]);
@@ -319,10 +326,11 @@ export default function IntervieweeChat() {
                   title={c.name ?? 'Unnamed Candidate'}
                   description={
                     <>
-                      <div>Email: {c.email ?? 'N/A'}</div>
-                      <div>Phone: {c.phone ?? 'N/A'}</div>
-                      <div>Resume: {c.resumeFileName ?? 'N/A'}</div>
-                      {c.score !== undefined && <div>Score: {c.score}</div>}
+                      <div><strong>Email:</strong> {c.email ?? 'N/A'}</div>
+                      <div><strong>Phone:</strong> {c.phone ?? 'N/A'}</div>
+                      <div><strong>Resume:</strong> {c.resumeFileName ?? 'N/A'}</div>
+                      {c.score !== undefined && <div><strong>Score:</strong> {c.score}</div>}
+                      {c.summary && <div><strong>Summary:</strong> {c.summary}</div>}
                     </>
                   }
                 />

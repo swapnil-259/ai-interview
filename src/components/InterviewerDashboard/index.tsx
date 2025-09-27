@@ -96,12 +96,7 @@ export default function InterviewerDashboard() {
             onCancel={() => setModalVisible(false)}
             footer={null}
           >
-            <p><strong>Name:</strong> {selectedCandidate.name ?? 'N/A'}</p>
-            <p><strong>Email:</strong> {selectedCandidate.email ?? 'N/A'}</p>
-            <p><strong>Phone:</strong> {selectedCandidate.phone ?? 'N/A'}</p>
-            <p><strong>Resume:</strong> {selectedCandidate.resumeFileName ?? 'N/A'}</p>
-            <p><strong>Score:</strong> {selectedCandidate.score ?? 0}</p>
-            <p><strong>Test Completed:</strong> {selectedCandidate.testCompleted ? 'Yes' : 'No'}</p>
+            <p><strong>Summary:</strong> {selectedCandidate.summary ?? 'N/A'}</p>
             <div style={{ marginTop: 16 }}>
               <Typography.Title level={5}>Chat</Typography.Title>
               <div style={{ maxHeight: 200, overflowY: 'auto', padding: 8, border: '1px solid #f0f0f0', borderRadius: 4 }}>
