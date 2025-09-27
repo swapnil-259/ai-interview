@@ -89,6 +89,7 @@ export default function IntervieweeChat() {
       }));
     }
   }
+
   const startTest = async () => {
     if (!currentId || nextField) return;
 
@@ -96,6 +97,7 @@ export default function IntervieweeChat() {
       setLoading(true);
       setTestStarted(true);
       setPaused(false);
+      setShowResumeModal(false);
 
       const { data } = await axios.post('http://localhost:4000/api/generate-test', {
         context: candidate?.name ?? ''
@@ -140,9 +142,12 @@ export default function IntervieweeChat() {
     localStorage.setItem('interviewState', JSON.stringify(saveState));
   }, [currentId, questionQueue, currentQuestionIndex, timer, testStarted, score, paused]);
 
+
   useEffect(() => {
-  const saved = localStorage.getItem('interviewState');
-  if (saved) {
+    if (currentId) return;
+    const saved = localStorage.getItem('interviewState');
+    if (!saved) return;
+
     const parsed = JSON.parse(saved);
     const savedCandidate = candidates.find(c => c.id === parsed.currentId);
     if (savedCandidate && !savedCandidate.testCompleted) {
@@ -157,8 +162,8 @@ export default function IntervieweeChat() {
     } else {
       localStorage.removeItem('interviewState');
     }
-  }
-}, [candidates]);
+  }, [candidates, currentId]);
+
 
   useEffect(() => {
     if (!testStarted || paused || questionQueue.length === 0 || currentQuestionIndex >= questionQueue.length) return;
@@ -186,6 +191,11 @@ export default function IntervieweeChat() {
   const resumeTest = () => {
     setPaused(false);
     setShowResumeModal(false);
+
+
+    if (questionQueue.length > 0 && currentQuestionIndex < questionQueue.length) {
+      setTimer(questionQueue[currentQuestionIndex].timeLimit);
+    }
   };
 
   const handleSendMessage = () => {
@@ -265,8 +275,8 @@ export default function IntervieweeChat() {
       setCurrentQuestionIndex(0);
       setTimer(0);
       setChatInput('');
-      setCurrentId((prev) => prev ? prev + '_updated' : null);
       localStorage.removeItem('interviewState');
+      setCurrentId((prev) => prev ? prev + '_updated' : null);
 
     } catch (err) {
       console.error(err);
