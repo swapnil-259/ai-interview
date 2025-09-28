@@ -10,9 +10,7 @@ import {
     deleteCandidate,
     updateCandidateProfile
 } from '../../store/slices/candidatesSlice';
-import { findEmail, findName, findPhone } from '../../utils/extractors';
 import regex from '../../utils/helpers/regex';
-import { extractTextFromDocx, extractTextFromPdf } from '../../utils/pdfHelpers';
 import Loader from '../Loader';
 
 interface Question {
@@ -53,22 +51,22 @@ export default function IntervieweeChat() {
   const nextField = getNextMissingField();
 
   async function handleResume(file: File) {
-    const ext = file.name.split('.').pop()?.toLowerCase();
-    let text = '';
-    if (ext === 'pdf') text = await extractTextFromPdf(file);
-    else if (ext === 'docx') text = await extractTextFromDocx(file);
-    else return;
+  const formData = new FormData();
+  formData.append("resume", file);
 
-    const name = findName(text) ?? undefined;
-    const email = findEmail(text) ?? undefined;
-    const phone = findPhone(text) ?? undefined;
+  try {
+    setLoading(true);
+    const { data } = await axios.post("https://ai.lyfeboat.in/api/parse-resume", formData, {
+      headers: { "Content-Type": "multipart/form-data" }
+    });
+    
 
     const id = uuidv4();
     dispatch(createCandidate({
       id,
-      name,
-      email,
-      phone,
+      name: data.name ?? undefined,
+      email: data.email ?? undefined,
+      phone: data.phone ?? undefined,
       chat: [],
       resumeFileName: file.name,
       score: 0,
@@ -82,14 +80,39 @@ export default function IntervieweeChat() {
     setTimer(0);
     setScore(0);
 
-    const firstMissing = !name ? 'name' : !email ? 'email' : !phone ? 'phone' : null;
+    const firstMissing = !data.name ? "name" : !data.email ? "email" : !data.phone ? "phone" : null;
+
     if (firstMissing) {
       dispatch(addChatMessage({
         id,
-        msg: { id: uuidv4(), role: 'ai', text: `Bot: Please provide your ${firstMissing}.`, timestamp: new Date().toISOString() }
+        msg: {
+          id: uuidv4(),
+          role: "ai",
+          text: `Bot: Please provide your ${firstMissing}.`,
+          timestamp: new Date().toISOString(),
+        },
+      }));
+    } else {
+      dispatch(addChatMessage({
+        id,
+        msg: {
+          id: uuidv4(),
+          role: "ai",
+          text: `Bot: Hi ${data.name}! Thanks for uploading your resume. Shall we start the interview?`,
+          timestamp: new Date().toISOString(),
+        },
       }));
     }
-  }
+
+    message.success("Resume processed successfully!");
+  } catch (err) {
+    console.error("Resume parsing failed:", err);
+    message.error("Resume parsing failed.");
+  } finally {
+      setLoading(false);
+    }
+}
+
 
   const startTest = async () => {
     if (!currentId || nextField) return;

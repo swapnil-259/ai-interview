@@ -1,16 +1,25 @@
-import mammoth from 'mammoth';
-import Pdf from 'react-pdftotext';
+import mammoth from "mammoth";
 
-export async function extractTextFromPdf(file: File): Promise<string> {
-  const arrayBuffer = await file.arrayBuffer();
-  const blob = new Blob([arrayBuffer], { type: file.type });
-  const text = await Pdf(blob);
-  return text;
-}
-
-
-export async function extractTextFromDocx(file: File): Promise<string> {
-  const arrayBuffer = await file.arrayBuffer();
-  const result = await mammoth.extractRawText({ arrayBuffer });
-  return result.value;
+export async function fileToGenerativePart(file: any) {
+  if (file.mimetype === "application/pdf") {
+    return {
+      inlineData: {
+        data: file.buffer.toString("base64"),
+        mimeType: file.mimetype,
+      },
+    };
+  } else if (
+    file.mimetype ===
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ) {
+    const { value: text } = await mammoth.extractRawText({ buffer: file.buffer });
+    return {
+      inlineData: {
+        data: Buffer.from(text).toString("base64"),
+        mimeType: "text/plain",
+      },
+    };
+  } else {
+    throw new Error("Unsupported file type");
+  }
 }

@@ -1,9 +1,9 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import cors from "cors";
 import dotenv from "dotenv";
-
 import express from "express";
-
-import OpenAI from "openai";
+import multer from "multer";
+import { fileToGenerativePart } from "../src/utils/pdfHelpers.ts";
 
 dotenv.config();
 
@@ -13,16 +13,17 @@ app.use(express.json());
 
 const port = process.env.PORT || 4000;
 
-if (!process.env.OPENAI_API_KEY) {
+if (!process.env.GEMINI_API_KEY) {
+  console.error("GEMINI_API_KEY not set in .env");
   process.exit(1);
 }
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({model: "gemini-2.5-flash", });
 
-function buildTestPrompt({
-  role = "full stack (React/Node)",
-  context = "",
-}) {
+const upload = multer({ storage: multer.memoryStorage() });
+
+function buildTestPrompt({ role = "full stack (React/Node)", context = "" }) {
   return `
 You are an expert technical interviewer for ${role} roles.
 Generate exactly 6 interview questions in JSON format:
@@ -61,16 +62,10 @@ app.post("/api/generate-test", async (req, res) => {
     const { context = "" } = req.body;
     const prompt = buildTestPrompt({ context });
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "system", content: prompt }],
-      temperature: 0.7,
-      max_tokens: 800,
-    });
+    const result = await model.generateContent(prompt);
+    const out = result.response.text();
 
-    const out = completion.choices?.[0]?.message?.content ?? "";
-    let parsed
-
+    let parsed;
     try {
       parsed = JSON.parse(out.trim());
     } catch {
@@ -79,7 +74,7 @@ app.post("/api/generate-test", async (req, res) => {
       if (firstBracket !== -1 && lastBracket !== -1) {
         parsed = JSON.parse(out.slice(firstBracket, lastBracket + 1));
       } else {
-        console.warn("⚠️ Invalid JSON, using fallback questions.");
+        console.warn("Invalid JSON, using fallback questions.");
         return res.json({ questions: fallbackQuestions() });
       }
     }
@@ -102,7 +97,6 @@ app.post("/api/generate-test", async (req, res) => {
 app.post("/api/evaluate-test", async (req, res) => {
   try {
     const { answers = [], candidateContext = "" } = req.body;
-
     if (!Array.isArray(answers) || answers.length === 0) {
       return res.status(400).json({ error: "answers array required" });
     }
@@ -123,16 +117,10 @@ ${JSON.stringify(answers, null, 2)}
 Candidate context: ${candidateContext}
 `;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "system", content: evalPrompt }],
-      temperature: 0.0,
-      max_tokens: 800,
-    });
+    const result = await model.generateContent(evalPrompt);
+    const out = result.response.text();
 
-    const out = completion.choices?.[0]?.message?.content ?? "";
-    let parsed
-
+    let parsed;
     try {
       parsed = JSON.parse(out.trim());
     } catch {
@@ -150,7 +138,6 @@ Candidate context: ${candidateContext}
             questionId: a.questionId,
             score: 1,
             feedback: "Fallback: answer accepted",
-            
           })),
           totalScore: total,
           finalSummary: "Fallback: candidate evaluation summary not available",
@@ -173,6 +160,51 @@ Candidate context: ${candidateContext}
   }
 });
 
-app.listen(port, () => {
-  console.log(` LLM backend running on port ${port}`);
+
+
+app.post("/api/parse-resume", upload.single("resume"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No resume uploaded" });
+    }
+
+    // Use the uploaded file buffer directly with Gemini
+    const fileData = await fileToGenerativePart(req.file);
+
+    const prompt = `
+You are an expert resume parser.
+Extract name, email, and phone in JSON:
+{
+  "name": "Full Name",
+  "email": "email@example.com",
+  "phone": "+91-XXXXXXXXXX"
+}
+
+Only return JSON. If a field cannot be found, return null.
+`;
+
+    const result = await model.generateContent([prompt, fileData]);
+    const out = result.response.text();
+    const jsonString = out.replace(/^```json\n|```$/g, "");
+
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonString.trim());
+    } catch {
+      parsed = { name: null, email: null, phone: null };
+    }
+
+    res.json(parsed);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Resume parsing failed" });
+  }
 });
+
+
+
+
+app.listen(port, () => {
+  console.log(`Gemini backend running on port ${port}`);
+});
+
