@@ -100,7 +100,7 @@ export default function InterviewerDashboard() {
             <p><strong>Summary:</strong> {selectedCandidate.summary ?? 'N/A'}</p>
             <div style={{ marginTop: 16 }}>
               <Typography.Title level={5}>Chat</Typography.Title>
-              <div style={{ maxHeight: 200, overflowY: 'auto', padding: 8, border: '1px solid #f0f0f0', borderRadius: 4 }}>
+              <div style={{ maxHeight: 300, overflowY: 'auto', padding: 8, border: '1px solid #f0f0f0', borderRadius: 4 }}>
                 {selectedCandidate.chat.length > 0 ? (
                   selectedCandidate.chat.map(msg => (
                     <div key={msg.id} style={{ marginBottom: 6, textAlign: msg.role === 'ai' ? 'left' : 'right' }}>
