@@ -1,13 +1,13 @@
 import cors from "cors";
 import dotenv from "dotenv";
-import type { Express, Request, Response } from "express";
+
 import express from "express";
 
 import OpenAI from "openai";
 
 dotenv.config();
 
-const app: Express = express();
+const app = express();
 app.use(cors());
 app.use(express.json());
 
@@ -18,33 +18,11 @@ if (!process.env.OPENAI_API_KEY) {
 }
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-type Difficulty = "easy" | "medium" | "hard";
 
-interface Question {
-  questionId: string;
-  question: string;
-  difficulty: Difficulty;
-  expectedPoints: 1 | 2 | 3;
-  timeLimit: number;
-}
-
-interface GenerateTestRequestBody {
-  context?: string;
-}
-
-interface EvaluateAnswer {
-  questionId: string;
-  answer: string;
-}
-
-interface EvaluateTestRequestBody {
-  answers: EvaluateAnswer[];
-  candidateContext?: string;
-}
 function buildTestPrompt({
   role = "full stack (React/Node)",
   context = "",
-}): string {
+}) {
   return `
 You are an expert technical interviewer for ${role} roles.
 Generate exactly 6 interview questions in JSON format:
@@ -65,7 +43,7 @@ Context: ${context}
 `;
 }
 
-function fallbackQuestions(): Question[] {
+function fallbackQuestions() {
   return [
     { questionId: "f1", question: "What is React?", difficulty: "easy", expectedPoints: 1, timeLimit: 20 },
     { questionId: "f2", question: "What is useState in React?", difficulty: "easy", expectedPoints: 1, timeLimit: 20 },
@@ -76,9 +54,9 @@ function fallbackQuestions(): Question[] {
   ];
 }
 
-const timeMap: Record<Difficulty, number> = { easy: 20, medium: 60, hard: 120 };
+const timeMap = { easy: 20, medium: 60, hard: 120 };
 
-app.post("/api/generate-test", async (req: Request<{}, {}, GenerateTestRequestBody>, res: Response) => {
+app.post("/api/generate-test", async (req, res) => {
   try {
     const { context = "" } = req.body;
     const prompt = buildTestPrompt({ context });
@@ -91,7 +69,7 @@ app.post("/api/generate-test", async (req: Request<{}, {}, GenerateTestRequestBo
     });
 
     const out = completion.choices?.[0]?.message?.content ?? "";
-    let parsed: any;
+    let parsed
 
     try {
       parsed = JSON.parse(out.trim());
@@ -106,12 +84,12 @@ app.post("/api/generate-test", async (req: Request<{}, {}, GenerateTestRequestBo
       }
     }
 
-    const questions: Question[] = parsed.map((q: any, idx: number) => ({
+    const questions = parsed.map((q, idx) => ({
       questionId: `q_${Date.now()}_${idx}`,
       question: q.question,
       difficulty: q.difficulty,
       expectedPoints: q.expected_points,
-      timeLimit: timeMap[q.difficulty as Difficulty] ?? 60,
+      timeLimit: timeMap[q.difficulty] ?? 60,
     }));
 
     res.json({ questions });
@@ -121,7 +99,7 @@ app.post("/api/generate-test", async (req: Request<{}, {}, GenerateTestRequestBo
   }
 });
 
-app.post("/api/evaluate-test", async (req: Request<{}, {}, EvaluateTestRequestBody>, res: Response) => {
+app.post("/api/evaluate-test", async (req, res) => {
   try {
     const { answers = [], candidateContext = "" } = req.body;
 
@@ -153,7 +131,7 @@ Candidate context: ${candidateContext}
     });
 
     const out = completion.choices?.[0]?.message?.content ?? "";
-    let parsed: any;
+    let parsed
 
     try {
       parsed = JSON.parse(out.trim());
@@ -184,7 +162,7 @@ Candidate context: ${candidateContext}
   } catch (err) {
     console.error("evaluate-test error:", err);
     res.json({
-      evaluations: req.body.answers.map((a: { questionId: any; }) => ({
+      evaluations: req.body.answers.map((a) => ({
         questionId: a.questionId,
         score: 1,
         feedback: "Fallback: answer accepted",
