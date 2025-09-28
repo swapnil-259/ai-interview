@@ -11,6 +11,7 @@ import {
     updateCandidateProfile
 } from '../../store/slices/candidatesSlice';
 import { findEmail, findName, findPhone } from '../../utils/extractors';
+import regex from '../../utils/helpers/regex';
 import { extractTextFromDocx, extractTextFromPdf } from '../../utils/pdfHelpers';
 import Loader from '../Loader';
 
@@ -199,39 +200,52 @@ export default function IntervieweeChat() {
   };
 
   const handleSendMessage = () => {
-    if (!currentId || !chatInput.trim()) return;
+  if (!currentId || !chatInput.trim()) return;
 
-    dispatch(addChatMessage({
-      id: currentId,
-      msg: { id: uuidv4(), role: 'candidate', text: chatInput.trim(), timestamp: new Date().toISOString() }
-    }));
+  dispatch(addChatMessage({
+    id: currentId,
+    msg: { id: uuidv4(), role: 'candidate', text: chatInput.trim(), timestamp: new Date().toISOString() }
+  }));
 
-    if (nextField) {
-      const newData: any = {};
-      newData[nextField] = chatInput.trim();
-      dispatch(updateCandidateProfile({ id: currentId, data: newData }));
+  if (nextField) {
+    const value = chatInput.trim();
 
-      const updatedCandidate = { ...candidate, ...newData };
-      const remainingField =
-        !updatedCandidate.name ? 'name' :
-        !updatedCandidate.email ? 'email' :
-        !updatedCandidate.phone ? 'phone' : null;
 
-      if (remainingField) {
-        dispatch(addChatMessage({
-          id: currentId,
-          msg: { id: uuidv4(), role: 'ai', text: `Bot: Please provide your ${remainingField}.`, timestamp: new Date().toISOString() }
-        }));
-      }
-    } else if (testStarted && questionQueue.length > 0) {
-      const updatedQueue = [...questionQueue];
-      updatedQueue[currentQuestionIndex].answer = chatInput.trim();
-      setQuestionQueue(updatedQueue);
-      handleNextQuestion();
+    if (nextField === 'email' && !regex.EMAIL.test(value)) {
+      message.warning("Please enter a valid email address.");
+      setChatInput('');
+      return;
     }
+    if (nextField === 'phone' && !regex.PHONE.test(value)) {
+      message.warning("Please enter a valid phone number.");
+      setChatInput('');
+      return;
+    }
+    const newData: any = {};
+    newData[nextField] = value;
+    dispatch(updateCandidateProfile({ id: currentId, data: newData }));
 
-    setChatInput('');
-  };
+    const updatedCandidate = { ...candidate, ...newData };
+    const remainingField =
+      !updatedCandidate.name ? 'name' :
+      !updatedCandidate.email ? 'email' :
+      !updatedCandidate.phone ? 'phone' : null;
+
+    if (remainingField) {
+      dispatch(addChatMessage({
+        id: currentId,
+        msg: { id: uuidv4(), role: 'ai', text: `Bot: Please provide your ${remainingField}.`, timestamp: new Date().toISOString() }
+      }));
+    }
+  } else if (testStarted && questionQueue.length > 0) {
+    const updatedQueue = [...questionQueue];
+    updatedQueue[currentQuestionIndex].answer = chatInput.trim();
+    setQuestionQueue(updatedQueue);
+    handleNextQuestion();
+  }
+
+  setChatInput('');
+};
 
   const handleNextQuestion = () => {
     const nextIndex = currentQuestionIndex + 1;
