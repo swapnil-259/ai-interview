@@ -99,7 +99,7 @@ export default function IntervieweeChat() {
       setPaused(false);
       setShowResumeModal(false);
 
-      const { data } = await axios.post('http://194.164.151.29:4000/api/generate-test', {
+      const { data } = await axios.post('https://ai.lyfeboat.in/api/generate-test', {
         context: candidate?.name ?? ''
       });
 
@@ -256,7 +256,7 @@ export default function IntervieweeChat() {
 
     try {
       setLoading(true);
-      const { data } = await axios.post('http://194.164.151.29:4000/api/evaluate-test', {
+      const { data } = await axios.post('https://ai.lyfeboat.in/api/evaluate-test', {
         answers: questionQueue.map(q => ({
           questionId: q.questionId,
           answer: q.answer ?? ''
