@@ -76,17 +76,18 @@ export default function InterviewerDashboard() {
           prefix={<SearchOutlined />}
           value={searchText}
           onChange={e => setSearchText(e.target.value)}
-          style={{ marginBottom: 16, width: 300 }}
+          style={{ marginBottom: 16, maxWidth: 300, width: '100%' }}
         />
 
         <Table
-          dataSource={filteredCandidates}
-          columns={columns}
-          rowKey="id"
-          onRow={(record) => ({
-            onClick: () => setSelectedCandidate(record),
-          })}
-          pagination={{ pageSize: 5 }}
+            dataSource={filteredCandidates}
+            columns={columns}
+            rowKey="id"
+            onRow={(record) => ({
+                onClick: () => setSelectedCandidate(record),
+            })}
+            pagination={{ pageSize: 5 }}
+            scroll={{ x: 'max-content' }} 
         />
 
         {selectedCandidate && (
